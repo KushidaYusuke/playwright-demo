@@ -59,11 +59,10 @@ jobs:
           
       - name: Set up test environment variables
         run: |
-          echo "BAREM_DATABASE_URL=mysql://root:@127.0.0.1:3306/e2e_test" >> $GITHUB_ENV
+          echo "DATABASE_URL=mysql://root:@127.0.0.1:3306/e2e_test" >> $GITHUB_ENV
 
       - name: Apply Prisma schema
         run: |
-          cd projects
           npx prisma db push --schema=prisma/schema.prisma
       
 
