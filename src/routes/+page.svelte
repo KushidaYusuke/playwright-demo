@@ -2,6 +2,19 @@
 	import Counter from './Counter.svelte';
 	import welcome from '$lib/images/svelte-welcome.webp';
 	import welcomeFallback from '$lib/images/svelte-welcome.png';
+
+	const { data } = $props();
+
+	const onchange = (count: number) => {
+		fetch('/api/counter', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ count })
+		});
+	}
+	$inspect(data);
 </script>
 
 <svelte:head>
@@ -21,11 +34,18 @@
 		to your new<br />SvelteKit app
 	</h1>
 
-	<h2>
-		try editing <strong>src/routes/+page.svelte</strong>
-	</h2>
+	<!-- カウンターリセット用ボタン-->
+	<button
+		onclick={async () => {
+			await fetch('/api/counter/reset', { method: 'PUT' });
+		    location.reload();
+		}}
+		aria-label="Reset the counter to zero"
+	>
+		Reset Counter
+	</button>
 
-	<Counter />
+	<Counter defaultValue={data.count?.count ?? 0} {onchange} />
 </section>
 
 <style>

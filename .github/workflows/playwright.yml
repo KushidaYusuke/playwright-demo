@@ -2,9 +2,9 @@ name: Playwright Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, prisma ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, prisma ]
 
 jobs:
   test:
@@ -13,6 +13,22 @@ jobs:
     strategy:
       matrix:
         node-version: [20]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ""
+          MYSQL_DATABASE: e2e_test
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+
+        ports:
+          - 3306:3306
+        # コンテナ起動後の安定待ち時間を設定
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +45,27 @@ jobs:
         run: pnpm install    
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps
+      - name: Wait for MySQL to be ready
+        run: |
+          # MySQLの起動確認
+          for i in {1..30}; do
+            if mysqladmin ping -h "127.0.0.1" -P 3306 --silent; then
+              echo "MySQL is up!"
+              break
+            fi
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+          
+      - name: Set up test environment variables
+        run: |
+          echo "BAREM_DATABASE_URL=mysql://root:@127.0.0.1:3306/e2e_test" >> $GITHUB_ENV
+
+      - name: Apply Prisma schema
+        run: |
+          cd projects
+          npx prisma db push --schema=prisma/schema.prisma
+      
 
       - name: Run Playwright tests
         run: pnpm exec playwright test

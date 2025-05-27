@@ -1,0 +1,28 @@
+services:
+  
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes' 
+      MYSQL_DATABASE: 'database' 
+      TZ: 'Asia/Tokyo'  
+    volumes:
+      # - ./my.cnf:/etc/my.cnf  # MySQLの設定ファイルをマウント
+      - mysql_data:/var/lib/mysql
+    # command: --mysql-native-password=ON
+    ports:
+      - 33307:3306
+  phpmyadmin:
+    image: phpmyadmin
+    depends_on:
+      - db
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOSTS=db
+      - PMA_USER=root
+      - PMA_PASSWORD=
+    ports:
+      - "3002:80"
+
+volumes:
+  mysql_data:
