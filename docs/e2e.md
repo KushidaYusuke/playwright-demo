@@ -1,5 +1,31 @@
 # playwrightでのE2Eテスト
 
+<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
+
+<!-- code_chunk_output -->
+
+- [playwrightでのE2Eテスト](#playwrightでのe2eテスト)
+  - [E2Eテストの概略](#e2eテストの概略)
+  - [環境の設定](#環境の設定)
+    - [新規でSveltekitプロジェクトを作成する場合](#新規でsveltekitプロジェクトを作成する場合)
+    - [既存のプロジェクトにplaywrightを導入したい場合](#既存のプロジェクトにplaywrightを導入したい場合)
+  - [設定ファイル(playwright.config.ts)](#設定ファイルplaywrightconfigts)
+  - [Playwrightが提供するテストツール](#playwrightが提供するテストツール)
+    - [ロケーター、アクション](#ロケーター-アクション)
+    - [アサーション](#アサーション)
+    - [フック](#フック)
+  - [その他](#その他)
+    - [パラメータ化テスト](#パラメータ化テスト)
+  - [VSCodeの拡張機能](#vscodeの拡張機能)
+    - [個別のテストに対するテスト実行](#個別のテストに対するテスト実行)
+    - [Show browser](#show-browser)
+    - [Show trace viewer](#show-trace-viewer)
+    - [Record new](#record-new)
+  - [CI環境でのplaywrightの実行](#ci環境でのplaywrightの実行)
+    - [参考資料](#参考資料)
+
+<!-- /code_chunk_output -->
+
 ## E2Eテストの概略
 E2Eテストはシステム全体に対して行われるテスト。
 
@@ -22,11 +48,14 @@ npx sv create (プロジェクト名)
 以下の画面でplaywrightを選択することで、
 playwrightがインストールされ、設定ファイル、テストフォルダが生成される。
 
+
 ![alt text](image.png)
 
 
 ![alt text](image-1.png)
 
+テストフォルダの中にテストファイルを作成する。デフォルトでは以下の形式のファイルがテストファイルとして認識される。
+```.*(test|spec).(js|ts|mjs)```
 
 
 ### 既存のプロジェクトにplaywrightを導入したい場合
@@ -48,32 +77,71 @@ npx sv add playwright
   - e2eテストに使用するテストフォルダを指定(例: tests, e2e)
 - webServer
   - テスト前に実装するwebサーバーの設定
-  - `reuseExistingServer: !process.env.CI`としてローカルでは既に立ち上げたサーバーが存在する場合はそのサーバーを使用するようにする。
+  - `reuseExistingServer: !process.env.CI`としてローカルでは既に立ち上げたサーバーが存在する場合はそのサーバーを使用するようにする。(メモ: sveltekitのプロジェクトファイル直下に`.env`ファイルが無い場合に、playwrightが環境変数を読み込むことができずに失敗してしまうことがあるが、`reuseExistingServer = true`として、既存のサーバを使用した場合には環境変数
+  を読み込むことができた)
+
+- .envファイルの設定
+   - playwrightが読み込む`.env`ファイルの位置を指定する。https://playwright.dev/docs/test-parameterize#env-files
+
+
+- project
+  - 同一の設定で実行されるテストを論理的にまとめたグループ
+
+  - 以下のように記述すると、`chromium`, `firefox`, `webkit`の3種類のブラウザでそれぞれのテストが実行される。
+
+```
+projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+  ],
+```
   
   
-  
 
 
 
 
 
-## Playwrightが提供するAPI
+## Playwrightが提供するテストツール
 参考: [Playwrightが提供するAPI一覧](https://playwright.dev/docs/api/class-test)
 
-### ロケーター
 
-テスト内で捜査対象の画面要素を指定する
+### ロケーター、アクション
 
-| メソッド名                          | 説明                                               | 使用例 |
-|-----------------------------------|----------------------------------------------------|--------|
-| `page.locator(selector)`         | CSS セレクタなどで要素を取得                      | `page.locator('text=Submit')` |
-| `locator.getByText(text)`        | 指定したテキストを含む要素を取得                  | `locator.getByText('ログイン')` |
-| `locator.getByRole(role, options)` | ロールとラベル名で要素を取得                      | `locator.getByRole('button', { name: '保存' })` |
-| `locator.nth(index)`             | インデックスで要素を指定                          | `locator.nth(1)` |
-| `locator.first()`                | 最初に一致した要素を取得                          | `locator.first()` |
-| `locator.last()`                 | 最後に一致した要素を取得                          | `locator.last()` |
-| `locator.filter(options)`       | テキストなどの条件で要素を絞り込み                | `locator.filter({ hasText: '削除' })` |
-| `locator.locator(childSelector)`| 子要素のロケーターを取得                          | `locator.locator('span')` |
+- ロケーター
+ページ内の要素を特定する。
+操作対象のテキストボックスやボタンなどを探し出す。
+
+　　[ロケーター一覧](https://playwright.dev/docs/locators)
+
+- アクション
+ロケーターを使用して選択した要素に対して、「ボタンをクリックする」、「セレクトボックスを選択する」といったユーザーの操作をシュミレーションする。
+
+
+- ロケーターの例
+
+| メソッド名                     | 説明                                              | 使用例                                                    |
+|--------------------------------|---------------------------------------------------|-----------------------------------------------------------|
+| `page.getByRole()`             | アクセシビリティ属性によって要素を検索            | `await page.getByRole('button', { name: '送信' }).click();` |
+| `page.getByLabel()`            | 関連するラベルのテキストでフォームコントロールを検索 | `await page.getByLabel('ユーザー名').fill('yusuke123');`    |
+| `page.getByPlaceholder()`      | プレースホルダーをもとに入力欄を検索              | `await page.getByPlaceholder('パスワード').fill('secret');` |
+| `page.getByText()`             | テキストコンテンツで要素を検索                    | `await page.getByText('ログイン').click();`                |
+| page.locator() |   | page.locator('#submit-button') (idを指定)  
+
+
+
+
+
 
 ### アサーション
 
@@ -123,6 +191,7 @@ npx sv add playwright
 
 ### フック 
 
+複数のテスト間で準備、片付けコードを共有する。
 `beforeAll`, `beforeEach`, `afterEach`, `afterAll`
 
 
@@ -156,7 +225,10 @@ sequenceDiagram
 
 - 使用例1(ログイン処理)
 
-ログイン処理は各テストの前に毎回実行されるので、`beforeEach`を使用する
+
+ログイン処理は各テストの前に毎回実行されるので、`beforeEach`を使用する(補足:ログイン処理を毎回実行すると実行時間がかかる。global-setup.ts内でcontext.storageState()を使用して　「一度だけログイン」-> 「テスト間でセッション情報を共有」とすることで実行時間を短縮できそう。後日追記する)
+
+
 
 ```ts
 test.describe('フォーム作成: メールアドレスのテスト', () => {
@@ -217,6 +289,7 @@ test.describe('DBを使用したテスト', () => {
  });
 ```
 
+## その他
 
 ### パラメータ化テスト
 
@@ -247,8 +320,6 @@ playwrightでも実行できるが、時間が掛かるので単体テスト向�
       });
     }
 ```
-
-//todo
 
 ## VSCodeの拡張機能
 
@@ -303,10 +374,14 @@ APIキーなどが必要な場合は事前にSecretに登録しておく必要�
 パブリックリポジトリの場合は料金がかからないが、プライベートリポジトリの場合は一定のストレージ、時間を超えると料金がかかる
 
 [GitHub Actions の課金について](https://docs.github.com/ja/billing/managing-billing-for-your-products/managing-billing-for-github-actions/
-<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
+
+
 about-billing-for-github-actions#github-actions-%E3%81%AE%E8%AA%B2%E9%87%91%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6)
 
 
+### 参考資料
 
+- [playwrightのドキュメント](https://playwright.dev/)
 
+- [Playwrightのベストプラクティスを翻訳してみた](https://daipresents.com/2024/04/15/playwright-best-practices/#test-user-visible-behavior)
 
