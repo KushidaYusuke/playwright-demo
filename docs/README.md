@@ -7,9 +7,6 @@
 
 main ブランチには通常のデモアプリが、prisma ブランチには Prisma と MySQL を用いてカウンター機能を永続化したバージョンが含まれています。
 
-<details>
-  <summary>E2Eテストの説明</summary>
 
   [E2Eテストの説明](./e2e.md)
 
-</details>
