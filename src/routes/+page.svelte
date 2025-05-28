@@ -14,7 +14,7 @@
 			body: JSON.stringify({ count })
 		});
 	}
-	$inspect(data);
+	// $inspect(data);
 </script>
 
 <svelte:head>
